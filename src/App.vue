@@ -1,6 +1,15 @@
 <template>
   <div class="home">
-    <DirectoryTreeView></DirectoryTreeView>
+    <v-container>
+      <v-row>
+        <v-col md="4">
+          <DirectoryTreeView></DirectoryTreeView>
+        </v-col>
+        <v-col md="8">
+          <DirectoryTreeView></DirectoryTreeView>
+        </v-col>
+      </v-row>
+    </v-container>
   </div>
 </template>
 
