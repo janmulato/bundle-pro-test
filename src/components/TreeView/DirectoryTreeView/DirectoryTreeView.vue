@@ -7,11 +7,12 @@
     </div>
     <Draggable
       :flatData="flatData"
+      :parentIdKey="'pid'"
       virtualization
       ref="tree"
-      :parentIdKey="'pid'"
-      @drop="drop($event)"
       edgeScroll
+      style="overflow: auto"
+      @drop="drop($event)"
     >
       <template
         v-slot="{ node }"
@@ -24,7 +25,7 @@
           :class="{ active: !!activeNode && node.$id === activeNode.id }"
         >
           <v-icon
-            @click="node.$folded = !node.$folded"
+            @click="toggleFold(node)"
             v-if="node.$children.length > 0"
             small
             :class="{ active: node.$folded }"
@@ -79,9 +80,10 @@
 </template>
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
-import { BaseTree, Draggable, BaseNode, Node } from "@he-tree/vue2";
+import { BaseTree, Draggable, BaseNode, Node, obj } from "@he-tree/vue2";
 import "@he-tree/vue2/dist/he-tree-vue2.css";
-import { FlatData } from "@/models/FlatData";
+import { DataTypes, FlatData } from "@/models/FlatData";
+import * as hp from "helper-js";
 
 @Component({
   components: {
@@ -112,6 +114,7 @@ export default class DirectoryTreeView extends Vue {
       return;
     }
 
+    this.tree.removeNode(node);
     this.$store.dispatch("removeFolder", node.$id);
   }
 
@@ -123,7 +126,9 @@ export default class DirectoryTreeView extends Vue {
     this.$store.dispatch("moveFolder", event?.draggingNode);
   }
 
-  updateNode(node: BaseNode, text: string): void {
+  updateNode(node: any, text: string): void {
+    node.isEdit = false;
+    node.text = text;
     this.$store.dispatch("setFolderName", { node: node, text: text });
   }
 
@@ -132,6 +137,15 @@ export default class DirectoryTreeView extends Vue {
       this.$refs[`tree-${node.$id}`]?.focus();
     });
   }
+
+  toggleFold(node: Node): void {
+    this.tree.toggleFold(node);
+  }
+
+  private childrenLoader = async (node: obj, vm) => {
+    console.log(vm, "vm");
+    return [];
+  };
 
   created(): void {
     this.$store.dispatch("getData");
@@ -155,18 +169,17 @@ export default class DirectoryTreeView extends Vue {
   &.active {
     border: 1px solid red;
     .actions {
-      display: block;
+      display: flex;
     }
   }
 
   &:hover {
     .actions {
-      display: block;
+      display: flex;
     }
   }
 
   input {
-    max-width: 50%;
     flex-grow: 1;
     &:focus {
       border: 1px solid blue;
@@ -177,15 +190,13 @@ export default class DirectoryTreeView extends Vue {
   }
 
   p {
-    // max-width: 120px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex-grow: 1;
-  }
-
-  .actions {
-    // margin-left: auto;
+    span {
+      max-width: 200px;
+    }
   }
 }
 

@@ -37,7 +37,6 @@ export function convertDataToFlat(
         isEdit: false,
         type: DataTypes.FOLDER,
       };
-      // newNode.pid = 
       flatData.push(newNode);
     },
     childrenKey

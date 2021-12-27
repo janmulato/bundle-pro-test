@@ -6,7 +6,6 @@
           <DirectoryTreeView></DirectoryTreeView>
         </v-col>
         <v-col md="7">
-          <!-- <DirectoryTreeView></DirectoryTreeView> -->
           <FolderTreeView></FolderTreeView>
         </v-col>
       </v-row>

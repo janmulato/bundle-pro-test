@@ -1,10 +1,11 @@
 <template>
   <div class="folder-view">
-    <div class="folder-actions">
+    <div class="folder-actions" v-if="!!activeNode">
       <button @click="addNode({})">
         <v-icon class="add-node" small>mdi-plus</v-icon>Create New File
       </button>
     </div>
+    {{ flatData }}
     <Draggable
       :flatData="flatData"
       virtualization
@@ -96,11 +97,17 @@ export default class FolderTreeView extends Vue {
   }
 
   public addNode(node: BaseNode): void {
-    this.$store.dispatch("createNewFolder", node).then((newFolder) => {
-      this.$nextTick(() => {
-        this.$refs[`tree-${newFolder.id}`]?.focus();
+    this.$store
+      .dispatch("createNewDocument", { node: node, folder: this.activeNode })
+      .then((newDocument) => {
+        if (!newDocument?.id) {
+          return;
+        }
+
+        this.$nextTick(() => {
+          this.$refs[`tree-${newDocument.id}`]?.focus();
+        });
       });
-    });
   }
 
   public removeNode(node: Node): void {
