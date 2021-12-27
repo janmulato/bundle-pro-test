@@ -21,7 +21,7 @@
       >
         <div
           class="tree"
-          :class="{ active: !!activeNode && node.$id === activeNode.$id }"
+          :class="{ active: !!activeNode && node.$id === activeNode.id }"
         >
           <v-icon
             @click="node.$folded = !node.$folded"
@@ -69,16 +69,19 @@
               >
             </button>
           </div>
+          <div>
+            {{ node.documents.length }}
+          </div>
         </div>
       </template>
     </Draggable>
   </div>
 </template>
 <script lang="ts">
-import { Component, Prop, Vue } from "vue-property-decorator";
-import { FlatData } from "@/models/FlatData";
+import { Component, Vue } from "vue-property-decorator";
 import { BaseTree, Draggable, BaseNode, Node } from "@he-tree/vue2";
 import "@he-tree/vue2/dist/he-tree-vue2.css";
+import { FlatData } from "@/models/FlatData";
 
 @Component({
   components: {
@@ -87,56 +90,20 @@ import "@he-tree/vue2/dist/he-tree-vue2.css";
   },
 })
 export default class DirectoryTreeView extends Vue {
-  @Prop() private msg!: string;
-  private flatData: Array<FlatData> = [
-    { text: "node1", id: 1, isEdit: false },
-    {
-      id: 2,
-      text: "node 1-1",
-      documents: [{ text: "testing 123", id: 123123 }],
-      pid: 1,
-      isEdit: false,
-    },
-    {
-      id: 3,
-      text: "node 1-1-1",
-      documents: [],
-      pid: 2,
-      isEdit: false,
-    },
-    {
-      id: 15,
-      text: "node 1-1-1",
-      documents: [],
-      pid: 2,
-      isEdit: false,
-    },
-    { id: 4, text: "node 1-2", pid: 1, isEdit: false },
-    { id: 5, text: "node 1-3", pid: 1, isEdit: false },
-    { id: 6, text: "node 1-4", pid: 1, isEdit: false },
-    { id: 7, text: "node 1-5", pid: 1, isEdit: false },
-    { id: 8, text: "node 1-6", pid: 1, isEdit: false },
-    { id: 9, text: "node 1-7", pid: 1, isEdit: false },
-    { id: 10, text: "node 1-8", pid: 1, isEdit: false },
-    { id: 11, text: "node 1-9", pid: 1, isEdit: false },
-    { id: 12, text: "node 1-10", pid: 1, isEdit: false },
-    { id: 13, text: "node 1-11", pid: 1, isEdit: false },
-    { id: 14, text: "node 1-12", pid: 1, isEdit: false },
-  ];
+  get flatData(): Array<FlatData> {
+    return this.$store.state.flatData;
+  }
 
-  private activeNode: BaseNode = {} as BaseNode;
+  get activeNode(): FlatData {
+    return this.$store.getters.selectedNode;
+  }
 
   public addNode(node: BaseNode): void {
-    const newFolder = {
-      text: "NewFolder",
-      id: this.generateId(),
-      pid: node?.$id,
-      isEdit: true,
-    };
-    this.flatData.push(newFolder);
-
-    this.$nextTick(() => {
-      this.$refs[`tree-${newFolder.id}`]?.focus();
+    this.$store.dispatch("createNewFolder", node).then((newFolder) => {
+      console.log(newFolder, "new folder");
+      this.$nextTick(() => {
+        this.$refs[`tree-${newFolder.id}`]?.focus();
+      });
     });
   }
 
@@ -145,41 +112,19 @@ export default class DirectoryTreeView extends Vue {
       return;
     }
 
-    const index = this._findIndex(node.$id);
-
-    if (index > -1) {
-      const node = this.flatData[index];
-      this.flatData.splice(index, 1);
-      this.flatData = this.flatData.filter((data) => data.pid != node.id);
-    }
+    this.$store.dispatch("removeFolder", node.$id);
   }
 
   setNode(node: BaseNode): void {
-    this.activeNode = node;
+    this.$store.dispatch("setActiveNode", node);
   }
 
   drop(event: any): void {
-    const index = this._findIndex(event?.draggingNode?.$id);
-    if (index > -1) {
-      this.flatData[index].pid = event?.draggingNode?.$pid;
-    }
-  }
-
-  generateId(prefix = ""): string {
-    return Math.random().toString(36).replace("0.", prefix);
+    this.$store.dispatch("moveFolder", event?.draggingNode);
   }
 
   updateNode(node: BaseNode, text: string): void {
-    const index = this._findIndex(node.$id);
-    if (index > -1) {
-      const data = this.flatData[index];
-      const updatedData = {
-        ...data,
-        text: text,
-        isEdit: false,
-      };
-      this.flatData.splice(index, 1, updatedData);
-    }
+    this.$store.dispatch("setFolderName", { node: node, text: text });
   }
 
   editNode(node: BaseNode): void {
@@ -188,8 +133,8 @@ export default class DirectoryTreeView extends Vue {
     });
   }
 
-  private _findIndex(id: string | number) {
-    return this.flatData.findIndex((item) => item.id === id);
+  created(): void {
+    this.$store.dispatch("getData");
   }
 }
 </script>
@@ -221,7 +166,7 @@ export default class DirectoryTreeView extends Vue {
   }
 
   input {
-    max-width: 60%;
+    max-width: 50%;
     flex-grow: 1;
     &:focus {
       border: 1px solid blue;
@@ -232,7 +177,7 @@ export default class DirectoryTreeView extends Vue {
   }
 
   p {
-    max-width: 150px;
+    // max-width: 120px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -240,7 +185,7 @@ export default class DirectoryTreeView extends Vue {
   }
 
   .actions {
-    margin-left: auto;
+    // margin-left: auto;
   }
 }
 
