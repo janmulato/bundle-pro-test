@@ -26,16 +26,21 @@ export function convertDataToFlat(
         text: node._Name,
         documents: node.Document.map((doc: string) => {
           return {
-            text: doc,
             id: hp.randString(12),
             folderId: folderId,
             pid: "",
             isEdit: false,
             type: DataTypes.DOCUMENT,
+            details: {
+              text: doc,
+            },
           };
         }),
         isEdit: false,
         type: DataTypes.FOLDER,
+        details: {
+          text: node._Name
+        }
       };
       flatData.push(newNode);
     },

@@ -1,11 +1,13 @@
 export interface FlatData {
   id: string | number;
-  text: string;
   pid?: string | number;
-  documents?: Array<FlatData>;
+  documents: Array<FlatData>;
   isEdit?: boolean;
   folderId?: string | number;
   type?: DataTypes;
+  details: {
+    text: string;
+  }
 }
 
 export enum DataTypes {

@@ -27,11 +27,15 @@ export type UpsertDocumentParam = {
 
 const state: State = {
   flatData: [],
-  activeNode: 0,
+  activeNode: -1,
 };
 
-function _findIndex(state: State, id: number | string) {
-  return state.flatData.findIndex((item: FlatData) => item.id === id);
+function _findIndex(data: Array<any>, id: number | string) {
+  return data.findIndex((item: FlatData) => item.id === id);
+}
+
+function _checkFolderOrIdExists(payload: UpsertDocumentParam) {
+  return !payload.folder && !payload.folderId;
 }
 
 export default new Vuex.Store({
@@ -42,7 +46,7 @@ export default new Vuex.Store({
     },
 
     removeFolder(state: State, id: string | number): void {
-      const index = _findIndex(state, id);
+      const index = _findIndex(state.flatData, id);
 
       if (index > -1) {
         const node = state.flatData[index];
@@ -52,7 +56,7 @@ export default new Vuex.Store({
     },
 
     moveFolder(state: State, node: Node) {
-      const index = _findIndex(state, node.$id);
+      const index = _findIndex(state.flatData, node.$id);
 
       if (index > -1) {
         state.flatData[index].pid = node?.$pid;
@@ -60,7 +64,7 @@ export default new Vuex.Store({
     },
 
     updateNode(state: State, payload: UpdateNodeParams): void {
-      const index = _findIndex(state, payload.node.$id);
+      const index = _findIndex(state.flatData, payload.node.$id);
 
       if (index > -1) {
         const data = state.flatData[index];
@@ -68,7 +72,11 @@ export default new Vuex.Store({
           ...data,
           text: payload.text,
           isEdit: false,
+          details: {
+            text: payload.text,
+          },
         };
+
         state.flatData.splice(index, 1, updatedData);
       }
     },
@@ -82,25 +90,62 @@ export default new Vuex.Store({
     },
 
     createDocument(state: State, payload: UpsertDocumentParam) {
-      const index = _findIndex(state, payload?.folder?.id);
+      const index = _findIndex(state.flatData, payload?.folder?.id);
       if (index > -1) {
         const data = state.flatData[index];
         data.documents?.push(payload.document);
         state.flatData.splice(index, 1, data);
       }
+    },
 
-      console.log(payload, "payload");
+    removeDocument(state: State, payload: UpsertDocumentParam) {
+      const index = _findIndex(state.flatData, payload?.folder?.id);
+      if (index > -1) {
+        const data = state.flatData[index];
+        const documentIndex = _findIndex(
+          data?.documents || [],
+          payload.document.id
+        );
+
+        data.documents.splice(documentIndex, 1);
+        data.documents = data.documents.filter(
+          (data) => data.pid != payload.document.id
+        );
+      }
+    },
+
+    updateDocument(state: State, payload: UpsertDocumentParam) {
+      const index = _findIndex(state.flatData, payload?.folder?.id);
+      if (index > -1) {
+        const data = state.flatData[index];
+        const documentIndex = _findIndex(
+          data?.documents || [],
+          payload.document.id
+        );
+
+        if (documentIndex < 0) {
+          return;
+        }
+
+        const updatedDoc = {
+          ...payload.document,
+        };
+
+        data.documents.splice(documentIndex, 1, updatedDoc);
+      }
     },
   },
   actions: {
     createNewFolder(context, node: Node) {
       const newFolder = {
-        text: "New Folder",
         id: hp.randString(12),
         pid: node?.$id,
         isEdit: true,
         type: DataTypes.FOLDER,
         documents: [],
+        details: {
+          text: "New Folder",
+        },
       };
 
       context.commit("addFolder", newFolder);
@@ -132,26 +177,62 @@ export default new Vuex.Store({
     },
 
     createNewDocument(context, payload: UpsertDocumentParam) {
-      if (!payload.folder && !payload.folderId) {
+      if (_checkFolderOrIdExists(payload)) {
         return;
       }
 
-      console.log(payload, 'in action')
-      payload.folder = payload?.folder
-        ? payload.folder
-        : context.getters.getFolderById(payload.folderId);
+      payload.folder = context.getters.getFolderInPayLoad(payload);
 
       const newDocument = {
-        text: "New Document",
         id: hp.randString(12),
         pid: payload.node?.$id,
         folderId: payload?.folder?.id,
         isEdit: true,
+        documents: [],
+        type: DataTypes.DOCUMENT,
+        details: {
+          text: "New Document",
+        },
       };
 
       payload.document = newDocument;
 
       context.commit("createDocument", payload);
+
+      return newDocument;
+    },
+
+    removeDoc(context, payload: UpsertDocumentParam) {
+      if (_checkFolderOrIdExists(payload)) {
+        return;
+      }
+
+      payload.folder = context.getters.getFolderInPayLoad(payload);
+
+      context.commit("removeDocument", payload);
+
+      return payload.document;
+    },
+
+    updateDoc(context, payload: UpsertDocumentParam) {
+      if (_checkFolderOrIdExists(payload)) {
+        return;
+      }
+
+      payload.folder = context.getters.getFolderInPayLoad(payload);
+
+      context.commit("updateDocument", payload);
+    },
+
+    moveDoc(context, payload: UpsertDocumentParam) {
+      if (!payload.folder && !payload.folderId) {
+        return;
+      }
+
+      payload.folder = context.getters.getFolderInPayLoad(payload);
+
+      payload.document.pid = payload.node.$pid;
+      context.commit("updateDocument", payload);
     },
   },
   getters: {
@@ -162,29 +243,36 @@ export default new Vuex.Store({
     },
 
     documentsAndFolders: (state) => {
-      const item = state.flatData.find(
+      const flatData = [...state.flatData];
+      const item = flatData.find(
         (data: FlatData) => data.id === state.activeNode
       );
 
-      console.log(item, 'item')
+      if (!item) {
+        return [];
+      }
 
-      const folders = state.flatData.filter((data: FlatData) => {
+      const folders = flatData.filter((data: FlatData) => {
         return data.pid === item?.id;
       });
 
-      // console.log(folders, 'folders');
-
-      console.log([...folders, ...(item?.documents || [])]);
-      // return [...folders, ...(item?.documents || [])];
-      return [...folders];
+      return [...folders, ...(item?.documents || [])];
     },
 
-    getFolderById: (state, id) => {
+    getFolderById: (state) => (id: number | string) => {
       return state.flatData.find((data: FlatData) => data.id === id);
     },
 
+    getFolderInPayLoad:
+      (state, getters) =>
+        (payload: UpsertDocumentParam): FlatData => {
+          return (payload.folder = payload?.folder
+            ? payload.folder
+            : getters.getFolderById(payload.folderId));
+        },
+
     getDirectory: (state) => {
-      return state.flatData;
+      return [...state.flatData];
     },
   },
   modules: {},

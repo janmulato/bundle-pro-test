@@ -14,12 +14,7 @@
       style="overflow: auto"
       @drop="drop($event)"
     >
-      <template
-        v-slot="{ node }"
-        triggerClass="drag-trigger"
-        edgeScroll
-        :gap="6"
-      >
+      <template v-slot="{ node }" edgeScroll :gap="6">
         <div
           class="tree"
           :class="{ active: !!activeNode && node.$id === activeNode.id }"
@@ -33,13 +28,13 @@
           >
           <v-icon small>mdi-folder</v-icon>
           <p v-if="!node.isEdit" class="text" @click="setNode(node)">
-            {{ node.text }}
+            {{ node.details.text }}
           </p>
           <input
             :ref="'tree-' + node.id"
             type="text"
             v-else
-            :value="node.text"
+            :value="node.details.text"
             @blur="updateNode(node, $event.target.value)"
           />
           <div class="actions">
@@ -79,11 +74,10 @@
   </div>
 </template>
 <script lang="ts">
-import { Component, Vue } from "vue-property-decorator";
+import { Component, Prop, Vue } from "vue-property-decorator";
 import { BaseTree, Draggable, BaseNode, Node, obj } from "@he-tree/vue2";
 import "@he-tree/vue2/dist/he-tree-vue2.css";
-import { DataTypes, FlatData } from "@/models/FlatData";
-import * as hp from "helper-js";
+import { FlatData } from "@/models/FlatData";
 
 @Component({
   components: {
@@ -92,9 +86,8 @@ import * as hp from "helper-js";
   },
 })
 export default class DirectoryTreeView extends Vue {
-  get flatData(): Array<FlatData> {
-    return this.$store.state.flatData;
-  }
+  private tree!: Draggable;
+  @Prop() flatData!: Array<FlatData>;
 
   get activeNode(): FlatData {
     return this.$store.getters.selectedNode;
@@ -102,7 +95,12 @@ export default class DirectoryTreeView extends Vue {
 
   public addNode(node: BaseNode): void {
     this.$store.dispatch("createNewFolder", node).then((newFolder) => {
-      console.log(newFolder, "new folder");
+      const addNode = {
+        ...newFolder,
+        $id: newFolder.id,
+      };
+      this.tree.addNode(addNode, node.$id);
+      this.$emit("change", node);
       this.$nextTick(() => {
         this.$refs[`tree-${newFolder.id}`]?.focus();
       });
@@ -115,11 +113,14 @@ export default class DirectoryTreeView extends Vue {
     }
 
     this.tree.removeNode(node);
-    this.$store.dispatch("removeFolder", node.$id);
+    this.$store.dispatch("removeFolder", node.$id).then(() => {
+      this.tree.removeNode(node);
+    });
   }
 
   setNode(node: BaseNode): void {
     this.$store.dispatch("setActiveNode", node);
+    this.$emit("change", node);
   }
 
   drop(event: any): void {
@@ -128,7 +129,7 @@ export default class DirectoryTreeView extends Vue {
 
   updateNode(node: any, text: string): void {
     node.isEdit = false;
-    node.text = text;
+    node.details.text = text;
     this.$store.dispatch("setFolderName", { node: node, text: text });
   }
 
@@ -142,13 +143,13 @@ export default class DirectoryTreeView extends Vue {
     this.tree.toggleFold(node);
   }
 
-  private childrenLoader = async (node: obj, vm) => {
-    console.log(vm, "vm");
-    return [];
-  };
+  // private childrenLoader = async (node: obj, vm) => {
+  //   console.log(vm, "vm");
+  //   return [];
+  // };
 
-  created(): void {
-    this.$store.dispatch("getData");
+  mounted(): void {
+    this.tree = this.$refs["tree"] as Draggable;
   }
 }
 </script>

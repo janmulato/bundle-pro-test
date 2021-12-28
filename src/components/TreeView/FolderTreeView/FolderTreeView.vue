@@ -5,24 +5,23 @@
         <v-icon class="add-node" small>mdi-plus</v-icon>Create New File
       </button>
     </div>
-    {{ flatData }}
     <Draggable
       :flatData="flatData"
+      :parentIdKey="'pid'"
+      :eachDroppable="draggableAndDroppable"
+      :eachDraggable="draggableAndDroppable"
       virtualization
       ref="tree"
-      :parentIdKey="'pid'"
-      @drop="drop($event)"
       edgeScroll
+      @drop="drop($event)"
     >
-      <template
-        v-slot="{ node }"
-        triggerClass="drag-trigger"
-        edgeScroll
-        :gap="6"
-      >
+      <template v-slot="{ node }" edgeScroll :gap="6">
         <div
           class="tree"
-          :class="{ active: !!activeNode && node.$id === activeNode.id }"
+          :class="{
+            active: !!activeNode && node.$id === activeNode.id,
+            draggable: node.type === dataTypes.DOCUMENT,
+          }"
         >
           <v-icon
             @click="node.$folded = !node.$folded"
@@ -33,13 +32,13 @@
           >
           <v-icon small>mdi-{{ node.type }}</v-icon>
           <p v-if="!node.isEdit" class="text">
-            {{ node.text }}
+            {{ node.details.text }}
           </p>
           <input
             :ref="'tree-' + node.id"
             type="text"
             v-else
-            :value="node.text"
+            :value="node.details.text"
             @blur="updateNode(node, $event.target.value)"
           />
           <div class="actions">
@@ -76,10 +75,10 @@
   </div>
 </template>
 <script lang="ts">
-import { Component, Vue } from "vue-property-decorator";
+import { Component, Prop, Vue } from "vue-property-decorator";
 import { BaseTree, Draggable, BaseNode, Node } from "@he-tree/vue2";
 import "@he-tree/vue2/dist/he-tree-vue2.css";
-import { FlatData } from "@/models/FlatData";
+import { DataTypes, FlatData } from "@/models/FlatData";
 
 @Component({
   components: {
@@ -88,9 +87,9 @@ import { FlatData } from "@/models/FlatData";
   },
 })
 export default class FolderTreeView extends Vue {
-  get flatData(): Array<FlatData> {
-    return this.$store.getters.documentsAndFolders;
-  }
+  private tree!: Draggable;
+  private dataTypes = DataTypes;
+  @Prop({ default: [] }) flatData!: Array<FlatData>;
 
   get activeNode(): FlatData {
     return this.$store.getters.selectedNode;
@@ -104,6 +103,12 @@ export default class FolderTreeView extends Vue {
           return;
         }
 
+        const addNode = {
+          ...newDocument,
+          $id: newDocument.id,
+        };
+        this.tree.addNode(addNode, node.$id);
+
         this.$nextTick(() => {
           this.$refs[`tree-${newDocument.id}`]?.focus();
         });
@@ -115,21 +120,58 @@ export default class FolderTreeView extends Vue {
       return;
     }
 
-    this.$store.dispatch("removeFolder", node.$id);
+    this.$store
+      .dispatch("removeDoc", {
+        document: node,
+        folder: this.activeNode,
+      })
+      .then(() => {
+        this.tree.removeNode(node);
+      });
   }
 
   drop(event: any): void {
-    this.$store.dispatch("moveFolder", event?.draggingNode);
+    console.log(event, "node");
+    const node = event?.draggingNode;
+    this.$store.dispatch("moveDoc", {
+      node: node,
+      folder: this.activeNode,
+      document: node,
+    });
   }
 
-  updateNode(node: BaseNode, text: string): void {
-    this.$store.dispatch("setFolderName", { node: node, text: text });
+  updateNode(node: FlatData, text: string): void {
+    node.isEdit = false;
+    node.details.text = text;
+
+    switch (node.type) {
+      case DataTypes.DOCUMENT:
+        this.$store.dispatch("updateDoc", {
+          document: node,
+          folder: this.activeNode,
+        });
+        break;
+      case DataTypes.FOLDER:
+        this.$store.dispatch("setFolderName", {
+          node: node,
+          text: text,
+        });
+        break;
+    }
   }
 
   editNode(node: BaseNode): void {
     this.$nextTick(() => {
       this.$refs[`tree-${node.$id}`]?.focus();
     });
+  }
+
+  private draggableAndDroppable = (node: FlatData) => {
+    return node.type === DataTypes.DOCUMENT;
+  };
+
+  mounted(): void {
+    this.tree = this.$refs["tree"] as Draggable;
   }
 }
 </script>
@@ -161,7 +203,6 @@ export default class FolderTreeView extends Vue {
   }
 
   input {
-    max-width: 50%;
     flex-grow: 1;
     &:focus {
       border: 1px solid blue;
