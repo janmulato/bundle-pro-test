@@ -7,7 +7,8 @@ export interface FlatData {
   type?: DataTypes;
   details: {
     text: string;
-  }
+    checked: boolean;
+  };
 }
 
 export enum DataTypes {

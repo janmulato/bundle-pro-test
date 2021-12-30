@@ -39,8 +39,9 @@ export function convertDataToFlat(
         isEdit: false,
         type: DataTypes.FOLDER,
         details: {
-          text: node._Name
-        }
+          text: node._Name,
+          checked: false,
+        },
       };
       flatData.push(newNode);
     },
@@ -65,6 +66,14 @@ export function isArray(v: any[]): v is any[] {
   return Object.prototype.toString.call(v) === "[object Array]";
 }
 
+/**
+ * From helper JS used in he-tree
+ * 
+ * @param obj 
+ * @param handler 
+ * @param childrenKey 
+ * @param opt 
+ */
 export function depthFirstSearch(
   obj: any,
   handler: depthFirstSearch_Handler,
@@ -96,6 +105,7 @@ export function depthFirstSearch(
 
       if (item[childrenKey] != null) {
         const itemChildren = item[childrenKey];
+        // Check if item children is array similar to rootChildren to accomodate the input.json
         const children = isArray(itemChildren) ? itemChildren : [itemChildren];
         func(children, item, path);
       }

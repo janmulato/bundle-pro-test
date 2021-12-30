@@ -2,14 +2,17 @@
   <div class="home">
     <v-container>
       <v-row>
-        <v-col md="5">
+        <button @click="loadData()">Reload source data</button>
+      </v-row>
+      <v-row>
+        <v-col col="12" md="5" lg="4">
           <DirectoryTreeView
             :flatData="folders"
-            @change="setActive($event)"
+            @change="setActive()"
           ></DirectoryTreeView>
         </v-col>
-        <v-col md="7">
-          <FolderTreeView :flatData="documentsAndFolders"></FolderTreeView>
+        <v-col col="12" md="5" lg="4">
+          <FolderTreeView :flatData.sync="documentsAndFolders"></FolderTreeView>
         </v-col>
       </v-row>
     </v-container>
@@ -39,10 +42,21 @@ export default class Home extends Vue {
     this.documentsAndFolders = [...this.$store.getters.documentsAndFolders];
   }
 
-  created(): void {
+  loadData(): void {
+    this.$store.dispatch("setActiveNode", {});
+    this.documentsAndFolders = [];
     this.$store.dispatch("getData").then((flatData) => {
       this.folders = [...flatData];
     });
   }
+
+  created(): void {
+    this.loadData();
+  }
 }
 </script>
+<style lang="scss" scoped>
+button {
+  padding: 0 0 10px;
+}
+</style>

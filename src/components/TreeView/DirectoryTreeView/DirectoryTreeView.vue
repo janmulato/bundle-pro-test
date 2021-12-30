@@ -11,10 +11,11 @@
       virtualization
       ref="tree"
       edgeScroll
-      style="overflow: auto"
+      style="height: 90vh; overflow: auto; max-height: 90vh"
       @drop="drop($event)"
+      :gap="6"
     >
-      <template v-slot="{ node }" edgeScroll :gap="6">
+      <template v-slot="{ node }">
         <div
           class="tree"
           :class="{ active: !!activeNode && node.$id === activeNode.id }"
@@ -65,8 +66,10 @@
               >
             </button>
           </div>
-          <div>
-            {{ node.documents.length }}
+          <div class="total-documents">
+            <span>
+              {{ node.documents.length }}
+            </span>
           </div>
         </div>
       </template>
@@ -143,11 +146,6 @@ export default class DirectoryTreeView extends Vue {
     this.tree.toggleFold(node);
   }
 
-  // private childrenLoader = async (node: obj, vm) => {
-  //   console.log(vm, "vm");
-  //   return [];
-  // };
-
   mounted(): void {
     this.tree = this.$refs["tree"] as Draggable;
   }
@@ -161,20 +159,22 @@ export default class DirectoryTreeView extends Vue {
   }
 }
 
+.directory-view {
+  background-color: #f7f7f7;
+  padding: 0 15px;
+}
+
 .tree {
   display: flex;
   flex-grow: 1;
   flex-basis: 150px;
   min-width: 0;
 
-  &.active {
-    border: 1px solid red;
-    .actions {
-      display: flex;
-    }
-  }
-
+  &.active,
   &:hover {
+    background-color: #d5ddec;
+    border: 1px solid blue($color: #000000);
+    border-radius: 3px;
     .actions {
       display: flex;
     }
@@ -199,6 +199,22 @@ export default class DirectoryTreeView extends Vue {
       max-width: 200px;
     }
   }
+
+  .total-documents {
+    background-color: #959aa5;
+    border: 1px solid gray;
+    border-radius: 3px;
+    margin: 0 25px 0 0;
+    span {
+      color: #f3fbfb;
+      padding: 5px;
+      font-size: 12px;
+    }
+  }
+}
+
+.directory-actions {
+  padding: 5px 0;
 }
 
 .text {
@@ -208,5 +224,20 @@ export default class DirectoryTreeView extends Vue {
 .actions {
   padding: 0 10px;
   display: none;
+  button {
+    padding: 0 1px;
+  }
+
+  .edit-node:hover {
+    color: blue;
+  }
+
+  .add-node:hover {
+    color: green;
+  }
+
+  .remove-node:hover {
+    color: red;
+  }
 }
 </style>

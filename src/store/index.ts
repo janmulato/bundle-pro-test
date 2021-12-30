@@ -10,6 +10,7 @@ Vue.use(Vuex);
 export type State = {
   flatData: Array<FlatData>;
   activeNode: number | string;
+  cutDocuments: Array<FlatData>;
 };
 
 export type UpdateNodeParams = {
@@ -28,14 +29,15 @@ export type UpsertDocumentParam = {
 const state: State = {
   flatData: [],
   activeNode: -1,
+  cutDocuments: [],
 };
 
-function _findIndex(data: Array<any>, id: number | string) {
+function _findIndex(data: Array<any>, id: number | string | undefined) {
   return data.findIndex((item: FlatData) => item.id === id);
 }
 
-function _checkFolderOrIdExists(payload: UpsertDocumentParam) {
-  return !payload.folder && !payload.folderId;
+function _isFolderOrIdExists(payload: UpsertDocumentParam) {
+  return payload.folder || payload.folderId;
 }
 
 export default new Vuex.Store({
@@ -74,6 +76,7 @@ export default new Vuex.Store({
           isEdit: false,
           details: {
             text: payload.text,
+            checked: false
           },
         };
 
@@ -108,9 +111,13 @@ export default new Vuex.Store({
         );
 
         data.documents.splice(documentIndex, 1);
-        data.documents = data.documents.filter(
-          (data) => data.pid != payload.document.id
-        );
+        data.documents.forEach((doc) => {
+          if (doc.pid !== payload.document.id) {
+            return;
+          }
+          const documentIndex = _findIndex(data?.documents || [], doc.id);
+          data.documents.splice(documentIndex, 1);
+        });
       }
     },
 
@@ -133,6 +140,10 @@ export default new Vuex.Store({
 
         data.documents.splice(documentIndex, 1, updatedDoc);
       }
+    },
+
+    cutDocuments(state: State, documents: Array<FlatData>) {
+      state.cutDocuments = documents;
     },
   },
   actions: {
@@ -166,7 +177,7 @@ export default new Vuex.Store({
     },
 
     setActiveNode(context, node: Node) {
-      context.commit("setActive", node.$id);
+      context.commit("setActive", node?.$id || -1);
     },
 
     getData(context) {
@@ -177,7 +188,7 @@ export default new Vuex.Store({
     },
 
     createNewDocument(context, payload: UpsertDocumentParam) {
-      if (_checkFolderOrIdExists(payload)) {
+      if (!_isFolderOrIdExists(payload)) {
         return;
       }
 
@@ -192,6 +203,7 @@ export default new Vuex.Store({
         type: DataTypes.DOCUMENT,
         details: {
           text: "New Document",
+          checked: false
         },
       };
 
@@ -203,7 +215,7 @@ export default new Vuex.Store({
     },
 
     removeDoc(context, payload: UpsertDocumentParam) {
-      if (_checkFolderOrIdExists(payload)) {
+      if (!_isFolderOrIdExists(payload)) {
         return;
       }
 
@@ -215,7 +227,7 @@ export default new Vuex.Store({
     },
 
     updateDoc(context, payload: UpsertDocumentParam) {
-      if (_checkFolderOrIdExists(payload)) {
+      if (!_isFolderOrIdExists(payload)) {
         return;
       }
 
@@ -233,6 +245,30 @@ export default new Vuex.Store({
 
       payload.document.pid = payload.node.$pid;
       context.commit("updateDocument", payload);
+    },
+
+    pasteDocuments(context, folder: FlatData) {
+      state.cutDocuments.forEach((data: FlatData) => {
+        const pasteDocument = {
+          ...data,
+          folderId: folder.id,
+          $checked: false,
+        };
+
+        context.commit("createDocument", {
+          document: pasteDocument,
+          folder: context.getters.getFolderById(folder.id),
+        });
+
+        const payload = {
+          document: data,
+          folder: context.getters.getFolderById(data.folderId),
+        };
+
+        context.commit("removeDocument", payload);
+      });
+
+      context.commit("cutDocuments", []);
     },
   },
   getters: {
@@ -273,6 +309,10 @@ export default new Vuex.Store({
 
     getDirectory: (state) => {
       return [...state.flatData];
+    },
+
+    getCutDocumentsId: (state) => {
+      return state.cutDocuments.map((data: FlatData) => data.id);
     },
   },
   modules: {},
