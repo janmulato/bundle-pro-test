@@ -1,6 +1,5 @@
 import { Node } from "@he-tree/vue2";
-export interface TreeData
-  extends Omit<Node, "$id" | "$level" | "$children"> {
+export interface TreeData extends Omit<Node, "$id" | "$level" | "$children"> {
   id: string | number;
   id$?: string | number;
   $level?: number;

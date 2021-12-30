@@ -76,7 +76,7 @@ export default new Vuex.Store({
           isEdit: false,
           details: {
             text: payload.text,
-            checked: false
+            checked: false,
           },
         };
 
@@ -203,7 +203,7 @@ export default new Vuex.Store({
         type: DataTypes.DOCUMENT,
         details: {
           text: "New Document",
-          checked: false
+          checked: false,
         },
       };
 
@@ -301,11 +301,11 @@ export default new Vuex.Store({
 
     getFolderInPayLoad:
       (state, getters) =>
-        (payload: UpsertDocumentParam): FlatData => {
-          return (payload.folder = payload?.folder
-            ? payload.folder
-            : getters.getFolderById(payload.folderId));
-        },
+      (payload: UpsertDocumentParam): FlatData => {
+        return (payload.folder = payload?.folder
+          ? payload.folder
+          : getters.getFolderById(payload.folderId));
+      },
 
     getDirectory: (state) => {
       return [...state.flatData];

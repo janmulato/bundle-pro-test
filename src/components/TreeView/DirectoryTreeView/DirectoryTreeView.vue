@@ -78,7 +78,7 @@
 </template>
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
-import { BaseTree, Draggable, BaseNode, Node, obj } from "@he-tree/vue2";
+import { BaseTree, Draggable, BaseNode, Node } from "@he-tree/vue2";
 import "@he-tree/vue2/dist/he-tree-vue2.css";
 import { FlatData } from "@/models/FlatData";
 

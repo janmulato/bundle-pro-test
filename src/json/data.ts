@@ -68,11 +68,11 @@ export function isArray(v: any[]): v is any[] {
 
 /**
  * From helper JS used in he-tree
- * 
- * @param obj 
- * @param handler 
- * @param childrenKey 
- * @param opt 
+ *
+ * @param obj
+ * @param handler
+ * @param childrenKey
+ * @param opt
  */
 export function depthFirstSearch(
   obj: any,
@@ -82,7 +82,7 @@ export function depthFirstSearch(
 ) {
   const rootChildren = isArray(obj) ? obj : [obj];
   //
-  class StopException { }
+  class StopException {}
   const func = (children: any, parent: any, parentPath: any) => {
     if (opt.reverse) {
       children = children.slice();

@@ -14,4 +14,4 @@ export interface FlatData {
 export enum DataTypes {
   FOLDER = "folder",
   DOCUMENT = "file",
-};
+}
